@@ -16,17 +16,22 @@
 
 package io.aeron.samples.infra;
 
+import io.aeron.cluster.service.Cluster;
 import io.aeron.samples.cluster.protocol.AddAuctionBidCommandDecoder;
 import io.aeron.samples.cluster.protocol.AddParticipantCommandDecoder;
+import io.aeron.samples.cluster.protocol.AuctionCreatedNotificationDecoder;
+import io.aeron.samples.cluster.protocol.AuctionCreatedNotificationEncoder;
 import io.aeron.samples.cluster.protocol.CreateAuctionCommandDecoder;
 import io.aeron.samples.cluster.protocol.ListAuctionsCommandDecoder;
 import io.aeron.samples.cluster.protocol.ListParticipantsCommandDecoder;
 import io.aeron.samples.cluster.protocol.MessageHeaderDecoder;
+import io.aeron.samples.cluster.protocol.MessageHeaderEncoder;
 import io.aeron.samples.domain.auctions.Auction;
 import io.aeron.samples.domain.auctions.Auctions;
 import io.aeron.samples.domain.participants.Participant;
 import io.aeron.samples.domain.participants.Participants;
 import org.agrona.DirectBuffer;
+import org.agrona.ExpandableDirectByteBuffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,14 +46,22 @@ public class SbeDemuxer
     private final Participants participants;
     private final Auctions auctions;
     private final ClusterClientResponder responder;
+    private Cluster cluster;
 
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
+    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
 
     private final AddParticipantCommandDecoder addParticipantDecoder = new AddParticipantCommandDecoder();
     private final AddAuctionBidCommandDecoder addAuctionBidDecoder = new AddAuctionBidCommandDecoder();
     private final CreateAuctionCommandDecoder createAuctionDecoder = new CreateAuctionCommandDecoder();
     private final ListAuctionsCommandDecoder listAuctionsDecoder = new ListAuctionsCommandDecoder();
     private final ListParticipantsCommandDecoder listParticipantsDecoder = new ListParticipantsCommandDecoder();
+    private final AuctionCreatedNotificationDecoder auctionCreatedNotificationDecoder =
+        new AuctionCreatedNotificationDecoder();
+    private final AuctionCreatedNotificationEncoder auctionCreatedNotificationEncoder =
+        new AuctionCreatedNotificationEncoder();
+
+    private final ExpandableDirectByteBuffer encodeBuffer = new ExpandableDirectByteBuffer(1024);
 
 
     /**
@@ -66,6 +79,15 @@ public class SbeDemuxer
         this.participants = participants;
         this.auctions = auctions;
         this.responder = responder;
+    }
+
+    /**
+     * Sets the cluster object used for offering messages
+     * @param cluster the cluster object
+     */
+    public void setCluster(final Cluster cluster)
+    {
+        this.cluster = cluster;
     }
 
     /**
@@ -95,12 +117,51 @@ public class SbeDemuxer
             case CreateAuctionCommandDecoder.TEMPLATE_ID ->
             {
                 createAuctionDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+
+                LOGGER.info("Received CreateAuctionCommand - encoding and submitting " +
+                    "AuctionCreatedNotification via cluster.offer");
+
+                // Encode dummy notification
+                auctionCreatedNotificationEncoder.wrapAndApplyHeader(encodeBuffer, 0, headerEncoder)
+                    .auctionId(-1L)  // dummy auction ID
+                    .createdByParticipantId(createAuctionDecoder.createdByParticipantId())
+                    .timestamp(System.currentTimeMillis())
+                    .message("CreateAuctionCommand received");
+
+                final int encodedLength = MessageHeaderEncoder.ENCODED_LENGTH +
+                    auctionCreatedNotificationEncoder.encodedLength();
+
+                // Submit to cluster via cluster.offer()
+                if (cluster != null)
+                {
+                    cluster.idleStrategy().reset();
+                    while (cluster.offer(encodeBuffer, 0, encodedLength) < 0)
+                    {
+                        cluster.idleStrategy().idle();
+                    }
+                    LOGGER.info("Successfully submitted AuctionCreatedNotification via cluster.offer");
+                }
+                else
+                {
+                    LOGGER.warn("Cluster not set, cannot offer AuctionCreatedNotification");
+                }
+
                 auctions.addAuction(createAuctionDecoder.createdByParticipantId(),
                     createAuctionDecoder.startTime(),
                     createAuctionDecoder.endTime(),
                     createAuctionDecoder.correlationId(),
                     createAuctionDecoder.name(),
                     createAuctionDecoder.description());
+            }
+            case AuctionCreatedNotificationDecoder.TEMPLATE_ID ->
+            {
+                auctionCreatedNotificationDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
+                LOGGER.info("Handling AuctionCreatedNotification: auctionId={}, " +
+                    "participantId={}, timestamp={}, message={}",
+                    auctionCreatedNotificationDecoder.auctionId(),
+                    auctionCreatedNotificationDecoder.createdByParticipantId(),
+                    auctionCreatedNotificationDecoder.timestamp(),
+                    auctionCreatedNotificationDecoder.message());
             }
             case AddAuctionBidCommandDecoder.TEMPLATE_ID ->
             {
