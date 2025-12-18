@@ -1,6 +1,35 @@
 # Backup
+
 The Backup application demonstrates how to replicate cluster data to another site, and how to use this
 data to populate new cluster nodes, or recover cluster nodes after a failure.
+
+## Documentation
+
+This directory contains comprehensive documentation for implementing Aeron cluster backup:
+
+- **[IMPLEMENTATION_GUIDE.md](./IMPLEMENTATION_GUIDE.md)** - Complete implementation guide covering:
+  - Architecture overview and component details
+  - Configuration parameters and tuning
+  - Deployment for Docker and Kubernetes
+  - Backup and restore procedures
+  - Best practices and production recommendations
+  - Troubleshooting common issues
+
+- **[QUICK_REFERENCE.md](./QUICK_REFERENCE.md)** - Quick reference for common operations:
+  - 5-minute quick start guides
+  - Essential commands for monitoring and backup
+  - Configuration reference tables
+  - Troubleshooting checklists
+
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Detailed architecture documentation:
+  - System architecture diagrams
+  - Component interaction flows
+  - Network communication patterns
+  - Deployment topologies
+  - Security architecture
+  - Monitoring and observability
+
+## Quick Start
 
 The instructions below demonstrate how you can do this using either Docker directly or with Kubernetes.
 
