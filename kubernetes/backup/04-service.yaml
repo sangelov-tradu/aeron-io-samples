@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aeron-io-sample-backup
+  namespace: aeron-io-sample-backup
+  labels:
+    app.kubernetes.io/name: aeron-io-sample-backup
+    app.kubernetes.io/instance: aeron-io-sample-backup
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: aeron-io-sample-backup
+    app.kubernetes.io/instance: aeron-io-sample-backup

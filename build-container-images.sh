@@ -1,4 +1,6 @@
-echo "building admin image..."
-docker build -f docker/Dockerfile --no-cache -t admin --build-context gradle=admin admin
+./echo "building admin image..."
+docker build -f docker/Dockerfile --build-context gradle=./admin -t admin . --no-cache
 echo "building cluster image..."
-docker build -f docker/Dockerfile --no-cache -t cluster --build-context gradle=cluster cluster
+docker build -f docker/Dockerfile --build-context gradle=./cluster -t cluster . --no-cache
+echo "building backup image..."
+docker build -f docker/Dockerfile --build-context gradle=./backup -t backup . --no-cache
