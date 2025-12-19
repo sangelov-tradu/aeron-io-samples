@@ -118,40 +118,45 @@ public class SbeDemuxer
             {
                 createAuctionDecoder.wrapAndApplyHeader(buffer, offset, headerDecoder);
 
-                LOGGER.info("Received CreateAuctionCommand - encoding and submitting " +
-                    "AuctionCreatedNotification via cluster.offer");
-
-                // Encode dummy notification
-                auctionCreatedNotificationEncoder.wrapAndApplyHeader(encodeBuffer, 0, headerEncoder)
-                    .auctionId(-1L)  // dummy auction ID
-                    .createdByParticipantId(createAuctionDecoder.createdByParticipantId())
-                    .timestamp(System.currentTimeMillis())
-                    .message("CreateAuctionCommand received");
-
-                final int encodedLength = MessageHeaderEncoder.ENCODED_LENGTH +
-                    auctionCreatedNotificationEncoder.encodedLength();
-
-                // Submit to cluster via cluster.offer()
-                if (cluster != null)
-                {
-                    cluster.idleStrategy().reset();
-                    while (cluster.offer(encodeBuffer, 0, encodedLength) < 0)
-                    {
-                        cluster.idleStrategy().idle();
-                    }
-                    LOGGER.info("Successfully submitted AuctionCreatedNotification via cluster.offer");
-                }
-                else
-                {
-                    LOGGER.warn("Cluster not set, cannot offer AuctionCreatedNotification");
-                }
-
-                auctions.addAuction(createAuctionDecoder.createdByParticipantId(),
+                // Create the auction first to get the actual auction ID
+                final long auctionId = auctions.addAuction(createAuctionDecoder.createdByParticipantId(),
                     createAuctionDecoder.startTime(),
                     createAuctionDecoder.endTime(),
                     createAuctionDecoder.correlationId(),
                     createAuctionDecoder.name(),
                     createAuctionDecoder.description());
+
+                // Only send notification if auction was created successfully
+                if (auctionId > 0)
+                {
+                    LOGGER.info("Received CreateAuctionCommand - encoding and submitting " +
+                        "AuctionCreatedNotification via cluster.offer");
+
+                    // Encode notification with actual auction ID
+                    auctionCreatedNotificationEncoder.wrapAndApplyHeader(encodeBuffer, 0, headerEncoder)
+                        .auctionId(auctionId)
+                        .createdByParticipantId(createAuctionDecoder.createdByParticipantId())
+                        .timestamp(System.currentTimeMillis())
+                        .message("CreateAuctionCommand received");
+
+                    final int encodedLength = MessageHeaderEncoder.ENCODED_LENGTH +
+                        auctionCreatedNotificationEncoder.encodedLength();
+
+                    // Submit to cluster via cluster.offer()
+                    if (cluster != null)
+                    {
+                        cluster.idleStrategy().reset();
+                        while (cluster.offer(encodeBuffer, 0, encodedLength) < 0)
+                        {
+                            cluster.idleStrategy().idle();
+                        }
+                        LOGGER.info("Successfully submitted AuctionCreatedNotification via cluster.offer");
+                    }
+                    else
+                    {
+                        LOGGER.warn("Cluster not set, cannot offer AuctionCreatedNotification");
+                    }
+                }
             }
             case AuctionCreatedNotificationDecoder.TEMPLATE_ID ->
             {

@@ -76,8 +76,9 @@ public class Auctions
      *                               is computed
      * @param name                   the name of the auction
      * @param description            the description
+     * @return the auction id if created successfully, -1 if validation failed
      */
-    public void addAuction(
+    public long addAuction(
         final long createdByParticipantId,
         final long startTime,
         final long endTime,
@@ -90,7 +91,7 @@ public class Auctions
         if (result != AddAuctionResult.SUCCESS)
         {
             clusterClientResponder.rejectAddAuction(correlationId, result);
-            return;
+            return -1L;
         }
 
         final var auctionId = idGenerator.incrementAndGet();
@@ -111,6 +112,8 @@ public class Auctions
         auction.setStartTimerCorrelationId(startCorrelationId);
         auction.setEndTimerCorrelationId(endCorrelationId);
         auction.setRemovalTimerCorrelationId(removeCorrelationId);
+
+        return auctionId;
     }
 
     /**
