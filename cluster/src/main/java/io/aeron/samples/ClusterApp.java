@@ -47,7 +47,6 @@ public class ClusterApp
      */
     public static void main(final String[] args)
     {
-        final ShutdownSignalBarrier barrier = new ShutdownSignalBarrier();
         final int portBase = getBasePort();
         final int nodeId = getClusterNode();
         final String hosts = getClusterAddresses();
@@ -65,12 +64,13 @@ public class ClusterApp
         hostAddresses.forEach(ClusterApp::awaitDnsResolution);
 
         try (
+            ShutdownSignalBarrier barrier = new ShutdownSignalBarrier();
             ClusteredMediaDriver ignored = ClusteredMediaDriver.launch(
-                clusterConfig.mediaDriverContext(),
+                clusterConfig.mediaDriverContext().terminationHook(barrier::signalAll),
                 clusterConfig.archiveContext(),
-                clusterConfig.consensusModuleContext());
+                clusterConfig.consensusModuleContext().terminationHook(barrier::signalAll));
             ClusteredServiceContainer ignored1 = ClusteredServiceContainer.launch(
-                clusterConfig.clusteredServiceContext()))
+                clusterConfig.clusteredServiceContext().terminationHook(barrier::signalAll)))
         {
             LOGGER.info("Started Cluster Node...");
             barrier.await();

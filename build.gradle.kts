@@ -18,6 +18,7 @@ val useStandby: String by project
 
 plugins {
     java
+    id("dependency-updates-conventions")
 }
 
 version = "0.0.2-SNAPSHOT"
