@@ -111,7 +111,7 @@ When the `add-auction` command is executed, you should see the following log mes
 01:55:05.542 [clustered-service-0-0] INFO  io.aeron.samples.infra.SbeDemuxer - Received CreateAuctionCommand - encoding and submitting AuctionCreatedNotification via cluster.offer
 01:55:05.542 [clustered-service-0-0] INFO  io.aeron.samples.infra.SbeDemuxer - Successfully submitted AuctionCreatedNotification via cluster.offer
 01:55:05.543 [clustered-service-0-0] INFO  i.a.samples.domain.auctions.Auctions - Creating new auction 'Tulips' with id 2
-01:55:05.549 [clustered-service-0-0] INFO  io.aeron.samples.infra.SbeDemuxer - Handling AuctionCreatedNotification: auctionId=-1, participantId=500, timestamp=1766102105541, message=CreateAuctionCommand received
+01:55:05.549 [clustered-service-0-0] INFO  io.aeron.samples.infra.SbeDemuxer - Handling AuctionCreatedNotification: auctionId=2, participantId=500, timestamp=1766102105541, message=CreateAuctionCommand received
 ```
 
 **What's happening:**
